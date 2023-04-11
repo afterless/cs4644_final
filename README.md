@@ -8,8 +8,9 @@ would be to build upon Nanda et al.'s [work](https://arxiv.org/pdf/2301.05217.pd
 ### References
 
 Below are external references we plan to use or have used throughout the duration of this project:
-[Relative representations enable zero-shot latent space communication](https://arxiv.org/pdf/2209.15430.pdf)
-[Low Dimensional Trajectory Hypothesis is True: DNNs Can Be Trained in Tiny Subspaces](https://ieeexplore.ieee.org/document/9782552)
+
+- [Relative representations enable zero-shot latent space communication](https://arxiv.org/pdf/2209.15430.pdf)
+- [Low Dimensional Trajectory Hypothesis is True: DNNs Can Be Trained in Tiny Subspaces](https://ieeexplore.ieee.org/document/9782552)
 
 
 ## Setup
