@@ -1,0 +1,15 @@
+# Make sure you installed the torch dependencies!
+
+fancy_einsum
+einops
+tqdm
+ipykernel
+notebook
+ipywidgets
+jupyter
+matplotlib
+numpy-stl
+black
+pandas
+wandb
+tensorboard
