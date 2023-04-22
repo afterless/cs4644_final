@@ -12,4 +12,5 @@ numpy-stl
 black
 pandas
 wandb
+scipy
 tensorboard
