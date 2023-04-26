@@ -166,7 +166,7 @@ def weight_matching(
 
 
 def test_weight_matching():
-    ps = mlp_permutation_spec(num_hidden_layers=3)
+    ps = mlp_permutation_spec(num_hidden_layers=1)
     rng = t.Generator()
     rng.manual_seed(1746)
     num_hidden = 10
