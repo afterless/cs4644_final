@@ -18,7 +18,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
         correct += pred.eq(target.view_as(pred)).sum().item()
         loss.backward()
         optimizer.step()
-        if i % args.log_interval == 0:
+        if i != 0 and i % args.log_interval == 0:
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
                     epoch,
@@ -29,14 +29,11 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
                 )
             )
             if wandb.run is not None:
-                table = wandb.Table(
-                    columns=[
-                        "operands",
-                        "sum",
-                    ]
-                )
-                for data, pred in zip(data[:5], pred[:5]):
-                    table.add_data(f"{data[0].item()}+{data[1].item()}", pred.item())
+                table = wandb.Table(columns=["operands", "pred_sum", "target_sum"])
+                for data, pred, target in zip(data[:5], pred[:5], target[:5]):
+                    table.add_data(
+                        f"{data[0].item()}+{data[1].item()}", pred.item(), target.item()
+                    )
                 wandb.log({"examples": table})
 
         loss_total += loss.item()
@@ -48,6 +45,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
             {
                 "train_loss": loss_total / t,
                 "train_acc": acc,
+                "epoch": epoch,
             }
         )
 
@@ -58,7 +56,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
     )
 
 
-def test(model, device, test_loader, loss):
+def test(model, device, epoch, test_loader, loss):
     test_loss = 0
     correct = 0
     i = 0
@@ -78,5 +76,5 @@ def test(model, device, test_loader, loss):
         )
     )
     if wandb.run is not None:
-        wandb.log({"test_loss": test_loss, "test_acc": acc})
+        wandb.log({"test_loss": test_loss, "test_acc": acc, "epoch": epoch})
     return test_loss, acc

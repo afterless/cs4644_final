@@ -60,7 +60,7 @@ def main():
     parser.add_argument("--opt", type=str, default="adamw")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--wd", type=float, default=1.0)
-    parser.add_argument("--log_interval", type=int, default=100)
+    parser.add_argument("--log_interval", type=int, default=5)
 
     args = parser.parse_args()
     device = t.device("cuda" if t.cuda.is_available() else "cpu")
@@ -111,7 +111,7 @@ def main():
             epoch,
             args,
         )
-        test(model, device, test_loader, cross_entropy_high_precision)
+        test(model, device, epoch, test_loader, cross_entropy_high_precision)
         scheduler.step()
         if epoch % args.save_every == 0:
             t.save(model.state_dict(), f"./checkpoints/transformer_grok_{epoch}.pt")
