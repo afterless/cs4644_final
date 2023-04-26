@@ -26,8 +26,8 @@ ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
 # Clone, create conda env, and install dependencies
 git clone git@github.com:afterless/cs4644_final.git
-ENV_PATH=~/cs4644_final/.env/
-cd $ENV_PATH
+cd cs4644_final
+ENV_PATH=~/cs4644_final/.env
 conda create -p $ENV_PATH python=3.10 -y
 conda install -p $ENV_PATH pytorch=1.12.0 torchtext torchdata torchvision -c pytorch -y
 conda run -p $ENV_PATH pip install -r requirements.txt
