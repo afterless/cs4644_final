@@ -131,6 +131,7 @@ poetry.toml
 .ruff_cache/
 pyrightconfig.json
 .vscode/*
+.vscode
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json

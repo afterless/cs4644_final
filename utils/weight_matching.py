@@ -19,7 +19,6 @@ def permutation_spec_from_axes_to_perm(axes_to_perm: dict) -> PermutationSpec:
     return PermutationSpec(perm_to_axes=dict(perm_to_axes), axes_to_perm=axes_to_perm)
 
 
-# Asier Moment
 def mlp_permutation_spec(num_hidden_layers: int) -> PermutationSpec:
     assert num_hidden_layers >= 1
     return permutation_spec_from_axes_to_perm(
@@ -148,6 +147,7 @@ def weight_matching(
                 w_b = get_permuted_param(ps, perm, wk, params_b, except_axis=axis)
                 w_a = t.moveaxis(w_a, axis, 0).reshape((n, -1))
                 w_b = t.moveaxis(w_b, axis, 0).reshape((n, -1))
+
                 A += t.matmul(w_a, w_b.T)
 
             ri, ci = linear_sum_assignment(A.detach().numpy(), maximize=True)
@@ -166,7 +166,8 @@ def weight_matching(
 
 
 def test_weight_matching():
-    ps = mlp_permutation_spec(num_hidden_layers=3)
+    ps = mlp_permutation_spec(num_hidden_layers=1)
+    print(ps.axes_to_perm)
     rng = t.Generator()
     rng.manual_seed(1746)
     num_hidden = 10
