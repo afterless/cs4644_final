@@ -75,7 +75,7 @@ class Attention(nn.Module):
         self.W_O = nn.parameter.Parameter(
             t.randn(d_model, d_head * num_heads) / d_model**0.5
         )
-        self.register_buffer("mask", t.triu(t.ones((n_ctx, n_ctx))))
+        self.register_buffer("mask", t.tril(t.ones((n_ctx, n_ctx))))
         self.d_head = d_head
         self.hook_q = HookPoint()
         self.hook_k = HookPoint()
@@ -107,9 +107,9 @@ class MLP(nn.Module):
         super().__init__()
         self.model = model
         self.W_in = nn.parameter.Parameter(t.randn(d_mlp, d_model) / d_model**0.5)
-        self.b_in = nn.parameter.Parameter(t.zeros(d_mlp))
+        # self.b_in = nn.parameter.Parameter(t.zeros(d_mlp))
         self.W_out = nn.parameter.Parameter(t.randn(d_model, d_mlp) / d_model**0.5)
-        self.b_out = nn.parameter.Parameter(t.zeros(d_model))
+        # self.b_out = nn.parameter.Parameter(t.zeros(d_model))
         self.act_type = act_type
 
         self.hook_pre = HookPoint()
@@ -117,13 +117,13 @@ class MLP(nn.Module):
         assert act_type in ["ReLU", "GeLU"]
 
     def forward(self, x):
-        x = self.hook_pre(t.einsum("md,bpd->bpm", self.W_in, x) + self.b_in)
+        x = self.hook_pre(t.einsum("md,bpd->bpm", self.W_in, x)) #+ self.b_in)
         if self.act_type == "ReLU":
             x = F.relu(x)
         elif self.act_type == "GeLU":
             x = F.gelu(x)
         x = self.hook_post(x)
-        x = t.einsum("dm,bpm->bpd", self.W_out, x) + self.b_out
+        x = t.einsum("dm,bpm->bpd", self.W_out, x) #+ self.b_out
         return x
 
 

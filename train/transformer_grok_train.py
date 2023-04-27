@@ -60,7 +60,8 @@ def main():
     parser.add_argument("--opt", type=str, default="adamw")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--wd", type=float, default=1.0)
-    parser.add_argument("--log_interval", type=int, default=5)
+    parser.add_argument("--log_interval", type=int, default=8)
+    parser.add_argument("--stopping_thresh", type=float, default=3e-6)
 
     args = parser.parse_args()
     device = t.device("cuda" if t.cuda.is_available() else "cpu")
@@ -111,10 +112,12 @@ def main():
             epoch,
             args,
         )
-        test(model, device, epoch, test_loader, cross_entropy_high_precision)
+        test_loss, _ = test(model, device, epoch, test_loader, cross_entropy_high_precision)
+        if test_loss < args.stopping_thresh:
+            break
         scheduler.step()
         if epoch % args.save_every == 0:
-            t.save(model.state_dict(), f"./checkpoints/transformer_grok_{epoch}.pt")
+            t.save(model.state_dict(), f"./checkpoints/transformer_no_bias_grok_{epoch}.pt")
 
 
 if __name__ == "__main__":

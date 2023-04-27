@@ -18,7 +18,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
         correct += pred.eq(target.view_as(pred)).sum().item()
         loss.backward()
         optimizer.step()
-        if i != 0 and i % args.log_interval == 0:
+        if i % args.log_interval == 0:
             print(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
                     epoch,
@@ -28,14 +28,13 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
                     loss.item(),
                 )
             )
-            if wandb.run is not None:
+            if wandb.run is not None and epoch % args.save_every == 0:
                 table = wandb.Table(columns=["operands", "pred_sum", "target_sum"])
                 for data, pred, target in zip(data[:5], pred[:5], target[:5]):
                     table.add_data(
                         f"{data[0].item()}+{data[1].item()}", pred.item(), target.item()
-                    )
+                    ) 
                 wandb.log({"examples": table})
-
         loss_total += loss.item()
         t += 1
 
