@@ -12,8 +12,26 @@ from torchvision import datasets
 from torchvision.transforms import ToTensor, Lambda
 import matplotlib.pyplot as plt
 from training import mnist_mlp_train
+import re
 
-def straight_through_estimator_training(ps: weight_matching.PermutationSpec, modelA_parameters, modelB_parameters,
+# def param_dict_with_correct_keys(model):
+#     params_model = {}
+#     for name, para in model.named_parameters():
+#         if(name.__contains__("r0.") or name.__contains__("N")):
+#             pass
+#         else:
+#             name = name.replace(".","",1)
+#             digits = filter(str.isdigit, name)
+#             digits = list(digits)
+#             replacements = []
+#             for digit in digits:
+#                 replacements.append(str(int(digit) + 1))
+#             for i in range(len(digits)):
+#                 name = name.replace(digits[i], replacements[i],1)
+#             params_model[name] = para
+#     return params_model
+
+def straight_through_estimator_training(ps: weight_matching.PermutationSpec, modelA, modelB,
                                         training_data, test_data, lr = 1e-3, bs = 64, loss_type = "nn.CrossEntropyLoss", model_type = "MLP"):
     train_dataloader = DataLoader(training_data, batch_size=bs)
     test_dataloader = DataLoader(test_data, batch_size=bs)
@@ -28,8 +46,27 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
         raise ValueError
     model_state_dict = model.state_dict()
     phi_state_dict = phi_model.state_dict()
+
+    params_a = {}
+    for name, para in modelA.named_parameters():
+        print(name)
+        params_a[name] = para
+
+    params_b = {}
+    for name, para in modelB.named_parameters():
+        params_b[name] = para
+
+    params_model = {}
+    for name, para in model.named_parameters():
+        params_model[name] = para
+    
+
+    # modelA_parameters = param_dict_with_correct_keys(modelA)
+    # modelB_parameters = param_dict_with_correct_keys(modelB)
+    # params_model = param_dict_with_correct_keys(model)
+
     # This loop for initializing model's parameters to modelA's parameters is wrong, and needs updating
-    model_state_dict.update(modelA_parameters)
+    model_state_dict.update(params_a)
     model.load_state_dict(model_state_dict)
     # for m, a in zip(model_state_dict.items(), modelA_parameters):
         # new_param = a[1]
@@ -45,22 +82,17 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
     
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     for xb, yb in train_dataloader:
-        # Need to get model's parameters correctly:
-        model_state_dict = model.state_dict()
-        params_model = {}
-        for name, para in model.named_parameters():
-            params_model[name] = para
-        perm = weight_matching.weight_matching(ps, params_model, modelB_parameters)
-        projected_parameters = weight_matching.apply_permutation(ps, perm, modelB_parameters)
+        perm = weight_matching.weight_matching(ps, params_model, params_b)
+        projected_parameters = weight_matching.apply_permutation(ps, perm, params_b)
         # for phi, proj, a in zip(phi_state_dict.items(), projected_parameters, modelA_parameters):
         #     new_param = 0.5 * (proj[1] + a[1])
         #     phi[1].copy_(new_param)
         for name, para in projected_parameters:
             print(name)
-        for name, para in modelA_parameters:
+        for name, para in params_a:
             print(name)
-        for (proj_name, proj_para), (a_name, a_para) in zip(projected_parameters, modelA_parameters):
-            phi_state_dict[proj_name] = 0.5 (proj_para + a_para)
+        for (proj_name, proj_para), (a_name, a_para) in zip(projected_parameters, params_a):
+            phi_state_dict[proj_name] = 0.5 * (proj_para + a_para)
         # new_phi_state_dict = 0.5 * (projected_parameters + modelA_parameters)
         phi_model.load_state_dict(phi_state_dict)
         preds = phi_model(xb)
@@ -71,7 +103,8 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
     return perm
 if __name__ == "__main__":
     lr = 1e-3
-    # mnist_mlp_train.mnist_mlp_train()
+    mnist_mlp_train.mnist_mlp_train()
+
     modelA = MLP()
     modelB = MLP()
     optimizerA = torch.optim.Adam(modelA.parameters(), lr=lr)
@@ -103,15 +136,10 @@ if __name__ == "__main__":
     # print(modelA)
     # print(modelA.parameters())
     # print(modelA.layers)
+    print(ps)
 
     # Trying to have parameters be the same as in weight_matching.py
-    params_a = {}
-    for name, para in modelA.named_parameters():
-        params_a[name] = para
-    params_b = {}
-    for name, para in modelB.named_parameters():
-        params_b[name] = para
 
     # Testcall for straight_through_estimator_training
     optimal_permutation_phi = straight_through_estimator_training(
-        ps, params_a, params_b, training_data, test_data, lr=lr, bs=bs, model_type=model_type)
+        ps, modelA, modelB, training_data, test_data, lr=lr, bs=bs, model_type=model_type)
