@@ -11,7 +11,9 @@ class MLP(nn.Module):
         self.layer1 = nn.Linear(512, 512)
         self.layer2 = nn.Linear(512, 512)
         self.layer3 = nn.Linear(512, 512)
-        self.layerN = nn.Linear(512, 10)
+        # Change name of layerN to layer4
+        # self.layerN = nn.Linear(512, 10)
+        self.layer4 = nn.Linear(512, 10)
         # Quentin: I added a log softmax layer to match Ainsworth et al's implementation
         self.LogSoftmax = nn.LogSoftmax()
 
@@ -23,6 +25,6 @@ class MLP(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         x = F.relu(self.layer3(x))
-        x = F.relu(self.layerN(x))
+        x = F.relu(self.layer4(x))
         # Quentin: I changed the return to a log softmax to match Ainsworth et al's implementation
         return self.LogSoftmax(x)
