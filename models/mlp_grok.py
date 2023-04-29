@@ -2,6 +2,7 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import reduce, rearrange
+from utils.hook_point import HookPoint
 
 
 # Not sure why positional embedding doesn't exist in pytorch?
@@ -31,12 +32,14 @@ class MLP(nn.Module):
         self.layer0 = nn.Linear(d_model + d_model, d_model * 2, bias=False)
         self.layer1 = nn.Linear(d_model * 2, d_model, bias=False)
         self.unembed = UnEmbed(d_vocab, d_model)
+        self.hook_pre = HookPoint()
+        self.hook_post = HookPoint()
 
     def forward(self, x):
         x = self.embed(x)
-        x = rearrange(x, 'b s d -> b (s d)')
-        #x = x.sum(dim=1)
-        x = F.relu(self.layer0(x))
-        x = F.relu(self.layer1(x))
+        x = rearrange(x, "b s d -> b (s d)")
+        # x = x.sum(dim=1)
+        x = F.relu(self.hook_pre(self.layer0(x)))
+        x = F.relu(self.hook_post(self.layer1(x)))
         x = self.unembed(x)
         return x
