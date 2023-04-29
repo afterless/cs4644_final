@@ -12,7 +12,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
     for i, (data, target) in enumerate(tqdm(train_loader)):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model(data)[:, -1]
+        output = model(data)
         loss = loss_fn(output, target)
         pred = output.argmax(dim=-1, keepdim=True)
         correct += pred.eq(target.view_as(pred)).sum().item()
@@ -62,7 +62,7 @@ def test(model, device, epoch, test_loader, loss):
     with t.inference_mode():
         for data, target in tqdm(test_loader):
             data, target = data.to(device), target.to(device)
-            output = model(data)[:, -1]
+            output = model(data)
             test_loss += loss(output, target).item()
             pred = output.argmax(dim=-1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
