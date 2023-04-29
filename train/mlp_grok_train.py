@@ -15,8 +15,8 @@ from utils.training import train, test
 # Fixed params for testing
 p = 113
 fn = lambda x, y: (x + y) % p
-d_model = 128
-d_vocab = p + 1
+d_model = 64
+d_vocab = p
 n_ctx = 3
 
 
@@ -49,7 +49,6 @@ def main():
     parser.add_argument("--num_epochs", type=int, default=50000)
     parser.add_argument("--save_every", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--batch_size", type=int, default=512)
     parser.add_argument("--opt", type=str, default="adamw")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--wd", type=float, default=1.0)
@@ -59,14 +58,18 @@ def main():
     args = parser.parse_args()
     device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
+    t.manual_seed(args.seed)
+    t.cuda.manual_seed(args.seed)
     train_pairs, test_pairs = gen_train_test(args.frac_train, p, seed=args.seed)
+    train_batch_size = len(train_pairs)
+    test_batch_size = len(test_pairs)
 
     train_pairs = TensorDataset(
         t.tensor([t[0] for t in train_pairs], dtype=t.long),
         t.tensor([t[1] for t in train_pairs], dtype=t.long),
     )
     train_loader = DataLoader(
-        train_pairs, batch_size=args.batch_size, shuffle=True, num_workers=2
+        train_pairs, batch_size=train_batch_size, shuffle=True, num_workers=2
     )
 
     test_pairs = TensorDataset(
@@ -74,7 +77,7 @@ def main():
         t.tensor([t[1] for t in test_pairs], dtype=t.long),
     )
     test_loader = DataLoader(
-        test_pairs, batch_size=args.batch_size, shuffle=False, num_workers=2
+        test_pairs, batch_size=test_batch_size, shuffle=False, num_workers=2
     )
 
     model = MLP(d_vocab, n_ctx, d_model)
@@ -90,8 +93,8 @@ def main():
         raise ValueError(f"Unknown optimizer {args.opt}")
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda step: min(step / 10, 1))
 
-    # wandb.init(project="grok_mod_add", config=vars(args))
-    # wandb.watch(model, log="all")
+    wandb.init(project="grok_mod_add", config=vars(args))
+    wandb.watch(model, log="all")
     os.makedirs("./checkpoints", exist_ok=True)
     for epoch in range(1, args.num_epochs + 1):
         train(
@@ -110,7 +113,9 @@ def main():
             break
         scheduler.step()
         if epoch % args.save_every == 0:
-            t.save(model.state_dict(), f"./checkpoints/mlp_no_bias_grok_{epoch}.pt")
+            t.save(model.state_dict(), f"./checkpoints/mlp_grok_{epoch}_{args.seed}.pt")
+
+    t.save(model.state_dict(), f"./checkpoints/mlp_grok_final_{args.seed}.pt")
 
 
 if __name__ == "__main__":
