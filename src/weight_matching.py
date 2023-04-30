@@ -154,7 +154,8 @@ def weight_matching(
             assert (t.tensor(ri) == t.arange(len(ri))).all()
             oldL = t.einsum("ij,ij->i", A, t.eye(n)[perm[p].long()]).sum()
             newL = t.einsum("ij,ij->i", A, t.eye(n)[ci, :]).sum()
-            print(f"{i}/{p}: {newL - oldL}")
+            # Quentin: Commented out the print statement for debugging
+            # print(f"{i}/{p}: {newL - oldL}")
             progress = progress or newL - oldL > 1e-12
 
             perm[p] = t.tensor(ci)

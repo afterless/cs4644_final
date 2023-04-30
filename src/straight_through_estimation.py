@@ -33,23 +33,22 @@ import re
 
 def straight_through_estimator_training(ps: weight_matching.PermutationSpec, modelA, modelB,
                                         training_data, test_data, lr = 1e-3, bs = 64, loss_type = "nn.CrossEntropyLoss", model_type = "MLP"):
+
     train_dataloader = DataLoader(training_data, batch_size=bs)
     test_dataloader = DataLoader(test_data, batch_size=bs)
-    # for a in modelA_parameters:
-    #     print(a)
-    #     print(modelA_parameters[a])
+
     # This method currently only supports MLP models
     if(model_type == "MLP"):
         model = MLP()
         phi_model = MLP()
     else:
         raise ValueError
+
     model_state_dict = model.state_dict()
     phi_state_dict = phi_model.state_dict()
 
     params_a = {}
     for name, para in modelA.named_parameters():
-        print(name)
         params_a[name] = para
 
     params_b = {}
@@ -59,51 +58,52 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
     params_model = {}
     for name, para in model.named_parameters():
         params_model[name] = para
-    
 
-    # modelA_parameters = param_dict_with_correct_keys(modelA)
-    # modelB_parameters = param_dict_with_correct_keys(modelB)
-    # params_model = param_dict_with_correct_keys(model)
-
-    # This loop for initializing model's parameters to modelA's parameters is wrong, and needs updating
     model_state_dict.update(params_a)
     model.load_state_dict(model_state_dict)
-    # for m, a in zip(model_state_dict.items(), modelA_parameters):
-        # new_param = a[1]
-        # m[1].copy_(new_param)
-        # model_state_dict[m] = modelA_parameters[a]
-    # Yet to implement epochs
+
     epochs = 8
     # This method currently only supports Cross Entropy Loss
     if(loss_type == "nn.CrossEntropyLoss"):
         loss_fn = nn.CrossEntropyLoss()
     else:
         raise ValueError
-    
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    for xb, yb in train_dataloader:
-        perm = weight_matching.weight_matching(ps, params_model, params_b)
-        projected_parameters = weight_matching.apply_permutation(ps, perm, params_b)
-        # for phi, proj, a in zip(phi_state_dict.items(), projected_parameters, modelA_parameters):
-        #     new_param = 0.5 * (proj[1] + a[1])
-        #     phi[1].copy_(new_param)
-        for name, para in projected_parameters:
-            print(name)
-        for name, para in params_a:
-            print(name)
-        for (proj_name, proj_para), (a_name, a_para) in zip(projected_parameters, params_a):
-            phi_state_dict[proj_name] = 0.5 * (proj_para + a_para)
-        # new_phi_state_dict = 0.5 * (projected_parameters + modelA_parameters)
-        phi_model.load_state_dict(phi_state_dict)
-        preds = phi_model(xb)
-        loss = loss_fn(preds, yb)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+
+    for e in range(epochs):
+        for xb, yb in train_dataloader:
+            perm = weight_matching.weight_matching(ps, params_model, params_b)
+            projected_parameters = weight_matching.apply_permutation(ps, perm, params_b)
+
+            for proj_name, (a_name, a_para) in zip(projected_parameters, modelA.named_parameters()):
+                phi_state_dict[a_name] = 0.5 * (projected_parameters[proj_name] + a_para)
+            phi_model.load_state_dict(phi_state_dict)
+            preds = phi_model(xb)
+            loss = loss_fn(preds, yb)
+            # TODO: Idea: Compute a loss for model, add layer that changes model's loss to phi_model's
+            # loss which has derivative 1, and then backpropagates.
+            optimizer.zero_grad()
+            loss.backward()
+            for model_param, phi_model_param in zip(model.parameters(), phi_model.parameters()):
+                model_param.grad = phi_model_param.grad
+
+            # Pytorch won't let me change model parameters mid-backwards pass
+            # for name, param in model.named_parameters():
+            #    grad_storage[name] = param
+            # model.load_state_dict(model_state_dict)
+            # for name, param in model.named_parameters():
+            #    param.grad = grad_storage[name]
+
+            optimizer.step()
+            for name, para in model.named_parameters():
+                params_model[name] = para
+            model_state_dict = model.state_dict()
+        loss = loss.item()
+        print(f"Train loss: {loss:>7f}")
     return perm
 if __name__ == "__main__":
     lr = 1e-3
-    mnist_mlp_train.mnist_mlp_train()
+    # mnist_mlp_train.mnist_mlp_train()
 
     modelA = MLP()
     modelB = MLP()
@@ -132,13 +132,7 @@ if __name__ == "__main__":
     modelA.train()
     modelB.train()
 
-    ps = weight_matching.mlp_permutation_spec(num_hidden_layers=3)
-    # print(modelA)
-    # print(modelA.parameters())
-    # print(modelA.layers)
-    print(ps)
-
-    # Trying to have parameters be the same as in weight_matching.py
+    ps = weight_matching.mlp_permutation_spec(num_hidden_layers=4)
 
     # Testcall for straight_through_estimator_training
     optimal_permutation_phi = straight_through_estimator_training(
