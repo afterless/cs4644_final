@@ -5,7 +5,6 @@ from einops import reduce, rearrange
 from utils.hook_point import HookPoint
 
 
-# Not sure why positional embedding doesn't exist in pytorch?
 class Embed(nn.Module):
     def __init__(self, d_vocab, d_model):
         super().__init__()
@@ -26,7 +25,7 @@ class UnEmbed(nn.Module):
 
 # TODO: Needs to be fixed to match spec
 class MLP(nn.Module):
-    def __init__(self, d_vocab, max_ctx, d_model):
+    def __init__(self, d_vocab, d_model):
         super().__init__()
         self.embed = Embed(d_vocab, d_model)
         self.layer0 = nn.Linear(d_model + d_model, d_model * 2, bias=False)

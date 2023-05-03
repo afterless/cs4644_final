@@ -33,7 +33,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
                 for data, pred, target in zip(data[:5], pred[:5], target[:5]):
                     table.add_data(
                         f"{data[0].item()}+{data[1].item()}", pred.item(), target.item()
-                    ) 
+                    )
                 wandb.log({"examples": table})
         loss_total += loss.item()
         t += 1

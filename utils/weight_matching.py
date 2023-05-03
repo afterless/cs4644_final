@@ -35,6 +35,20 @@ def mlp_permutation_spec(num_hidden_layers: int) -> PermutationSpec:
     )
 
 
+def mlp_grok_permutation_spec(num_hidden_layers: int) -> PermutationSpec:
+    assert num_hidden_layers >= 1
+    return permutation_spec_from_axes_to_perm(
+        {
+            "layer0.weight": ("P_0", None),
+            **{
+                f"layer{i}.weight": (f"P_{i}", f"P_{i-1}")
+                for i in range(1, num_hidden_layers)
+            },
+            f"layer{num_hidden_layers}.weight": (None, f"P_{num_hidden_layers-1}"),
+        }
+    )
+
+
 def resnet50_permutation_spec() -> PermutationSpec:
     conv = lambda name, p_in, p_out: {f"{name}.weight": (p_out, p_in, None, None)}
     norm = lambda name, p: {f"{name}.weight": (p,), f"{name}.bias": (p,)}
@@ -101,13 +115,14 @@ def get_permuted_param(ps: PermutationSpec, perm, k: str, params, except_axis=No
     Given a permutation, a parameter name, and a set of parameters, returns the permuted parameter
     """
     w = params[k]
-    for axis, p in enumerate(ps.axes_to_perm[k]):
-        # Skip axis we're trying to permute
-        if axis == except_axis:
-            continue
+    if k in ps.axes_to_perm:
+        for axis, p in enumerate(ps.axes_to_perm[k]):
+            # Skip axis we're trying to permute
+            if axis == except_axis:
+                continue
 
-        if p is not None:
-            w = t.index_select(w, axis, perm[p].int())
+            if p is not None:
+                w = t.index_select(w, axis, perm[p].int())
 
     return w
 

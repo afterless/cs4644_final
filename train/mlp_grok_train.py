@@ -17,7 +17,6 @@ p = 113
 fn = lambda x, y: (x + y) % p
 d_model = 64
 d_vocab = p
-n_ctx = 3
 
 
 def cross_entropy_high_precision(logits, labels):
@@ -80,7 +79,7 @@ def main():
         test_pairs, batch_size=test_batch_size, shuffle=False, num_workers=2
     )
 
-    model = MLP(d_vocab, n_ctx, d_model)
+    model = MLP(d_vocab, d_model)
     model.to(device)
 
     if args.opt == "adamw":
