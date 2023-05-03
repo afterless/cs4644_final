@@ -10,9 +10,12 @@ from flax.training.train_state import TrainState
 from jax import jit, random, tree_map, value_and_grad, vmap
 from tqdm import tqdm
 
-from utils import (flatten_params, lerp, rngmix, timeblock, tree_l2, unflatten_params)
-from weight_matching import (PermutationSpec, apply_permutation, mlp_permutation_spec,
-                             weight_matching)
+import torch
+from torch.utils.data import DataLoader, TensorDataset
+from models.mlp_grok import MLP
+from utils.training import test
+from utils.weight_matching import PermutationSpec, mlp_permutation_spec, weight_matching, apply_permutation
+from train.mlp_grok_train import gen_train_test, cross_entropy_high_precision
 
 # See https://github.com/tensorflow/tensorflow/issues/53831.
 
@@ -39,12 +42,12 @@ class MLPModel(nn.Module):
 
   @nn.compact
   def __call__(self, x):
-    x = jnp.reshape(x, (-1, 2))
     x = nn.Dense(512)(x)
     x = activation(x)
     x = nn.Dense(512)(x)
     x = activation(x)
     x = nn.Dense(1)(x)
+    print(x)
     return x
 
 def make_stuff(model):
@@ -63,7 +66,6 @@ def make_stuff(model):
 
   def dataset_loss_and_accuracy(params, dataset, batch_size: int):
     num_examples = dataset["inputs"].shape[0]
-    print(num_examples, batch_size)
     assert num_examples % batch_size == 0
     num_batches = num_examples // batch_size
     batch_ix = jnp.arange(num_examples).reshape((num_batches, batch_size))
@@ -103,78 +105,56 @@ def make_stuff(model):
   }
 
 if __name__ == "__main__":
-  num_models = 32
+  p = 113
+  d_model = 64
+  d_vocab = p
+  n_ctx = 3
 
-  batch_size = 500
-  learning_rate = 1e-3
-  num_epochs = 100
+  frac_train = 0.3
+  n_models = 3
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-  model = MLPModel()
-  stuff = make_stuff(model)
+  models = [MLP(d_vocab, n_ctx, d_model) for _ in range(n_models)]
+  checkpoints = [torch.load(f"./train/checkpoints/mlp_grok_final_{i + 1}.pt", map_location=torch.device("cpu")) for i in range(n_models)]
 
-  with timeblock("load datasets"):
-    train_ds, test_ds = generate_numbers()
-    print("train_ds labels hash", hash(np.array(train_ds["labels"]).tobytes()))
-    print("test_ds labels hash", hash(np.array(test_ds["labels"]).tobytes()))
 
-    num_train_examples = train_ds["inputs"].shape[0]
-    num_test_examples = test_ds["inputs"].shape[0]
-    assert num_train_examples % batch_size == 0
-    print("num_train_examples", num_train_examples)
-    print("num_test_examples", num_test_examples)
+  train_pairs, test_pairs = gen_train_test(frac_train, p)
+  train_batch_size = len(train_pairs)
+  test_batch_size = len(test_pairs)
 
-  def train_one(seed: int):
-    rng = random.PRNGKey(seed)
-    tx = optax.adam(learning_rate)
+  test_pairs = TensorDataset(
+          torch.tensor([t[0] for t in test_pairs], dtype=torch.long),
+          torch.tensor([t[1] for t in test_pairs], dtype=torch.long),
+          )
+  test_loader = DataLoader(
+    test_pairs, batch_size=test_batch_size, shuffle=False, num_workers=2
+  )
+  losses = []
+  epochs = []
+  for i in range(n_models):
+   models[i].load_state_dict(checkpoints[i])
 
-    num_subset_examples = num_train_examples // 2
-    subset_ix = random.permutation(rngmix(rng, "subset_ix"),
-                                   jnp.arange(num_train_examples))[0:num_subset_examples]
-    subset_ds = {
-        "inputs": train_ds["inputs"][subset_ix, :],
-        "labels": train_ds["labels"][subset_ix],
-    }
 
-    train_state = TrainState.create(
-        apply_fn=model.apply,
-        params=model.init(rngmix(rng, "init"), jnp.zeros((1, 2, 1)))["params"],
-        tx=tx,
+  for i in range(n_models):
+    model = models[i]
+    epoch = None
+    test_loss, test_acc = test(
+        model, device, epoch, test_loader, cross_entropy_high_precision
     )
-
-    for epoch in tqdm(range(num_epochs)):
-      infos = []
-      batch_ix = random.permutation(rngmix(rng, f"epoch-{epoch}"), num_subset_examples).reshape(
-          (-1, batch_size))
-      for i in range(batch_ix.shape[0]):
-        p = batch_ix[i, :]
-        inputs = subset_ds["inputs"][p, :]
-        labels = subset_ds["labels"][p]
-        train_state, info = stuff["step"](train_state, inputs, labels)
-        infos.append(info)
-
-      # train_loss = sum(batch_size * x["batch_loss"] for x in infos) / num_train_examples
-      # train_accuracy = sum(x["num_correct"] for x in infos) / num_train_examples
-
-    return train_state.params
-
-  all_params = [train_one(i) for i in range(num_models)]
-
-  for i, params in enumerate(all_params):
-    train_loss, train_acc = stuff['dataset_loss_and_accuracy'](params, train_ds, 500)
-    test_loss, test_acc = stuff['dataset_loss_and_accuracy'](params, test_ds, 500)
-    print(f"{i}: train_loss={train_loss:.4f} train_acc={train_acc:.4f} "
-          f"test_loss={test_loss:.4f} test_acc={test_acc:.4f}")
-
-  tree_mean = lambda args: tree_map(lambda *x: sum(x) / len(x), *args)
+    print(f"test_loss={test_loss:.4f} test_acc={test_acc:.4f}")
 
   ### Naive
-  params_naive = tree_mean(all_params)
-  train_loss_naive, train_acc_naive = stuff["dataset_loss_and_accuracy"](params_naive, train_ds,
-                                                                         500)
-  test_loss_naive, test_acc_naive = stuff["dataset_loss_and_accuracy"](params_naive, test_ds,
-                                                                       500)
-  print(f"[naive] train loss: {train_loss_naive:.4f}, train accuracy: {train_acc_naive:.4f} "
-        f"test loss: {test_loss_naive:.4f}, test accuracy: {test_acc_naive:.4f}")
+  naive = MLP(d_vocab, n_ctx, d_model)
+  with torch.no_grad():
+      naive.embed.W_E.data = torch.mean(torch.stack([model.embed.W_E for model in models], dim=2))
+      naive.layer0.weight.data = torch.mean(torch.stack([model.layer0.weight for model in models], dim=2))
+      naive.layer1.weight.data = torch.mean(torch.stack([model.layer1.weight for model in models], dim=2))
+      naive.unembed.W_U.data = torch.mean(torch.stack([model.unembed.W_U for model in models], dim=2))
+
+  test_loss_naive, test_acc_naive = test(
+      model, device, epoch, test_loader, cross_entropy_high_precision
+  )
+  print(f"test loss: {test_loss_naive:.4f}, test accuracy: {test_acc_naive:.4f}")
 
   permutation_spec = mlp_permutation_spec(2)
 
