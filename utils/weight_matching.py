@@ -42,7 +42,7 @@ def mlp_grok_permutation_spec(num_hidden_layers: int) -> PermutationSpec:
             "embed.W_E": (None, "P_0"),
             "layer0.weight": ("P_1", None),
             **{
-                f"layer{i}.weight": (f"P_{i+1}", f"P_{i}")
+                f"layer{i}.weight": (f"P_{i+1}", f"P_{1}")
                 for i in range(1, num_hidden_layers)
             },
             "unembed.W_U": (f"P_{num_hidden_layers}", None),
