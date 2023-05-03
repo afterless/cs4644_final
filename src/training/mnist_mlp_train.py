@@ -53,8 +53,8 @@ def mnist_mlp_train(num_models=2):
         model = MLP().to(device)
         # print(model)
         lr = 1e-3
-        bs = 64
-        epochs = 8
+        bs = 32
+        epochs = 15
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         for e in range(epochs):

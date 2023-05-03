@@ -13,6 +13,8 @@ from torchvision.transforms import ToTensor, Lambda
 import matplotlib.pyplot as plt
 from training import mnist_mlp_train
 import re
+import time
+import copy
 
 # def param_dict_with_correct_keys(model):
 #     params_model = {}
@@ -62,16 +64,21 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
     model_state_dict.update(params_a)
     model.load_state_dict(model_state_dict)
 
-    epochs = 8
+    epochs = 15
     # This method currently only supports Cross Entropy Loss
     if(loss_type == "nn.CrossEntropyLoss"):
         loss_fn = nn.CrossEntropyLoss()
     else:
         raise ValueError
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
+    start = time.time()
     for e in range(epochs):
+        i = 1
         for xb, yb in train_dataloader:
+            print("Epoch: " +  str(e + 1) + " Iteration: " + str(i))
+            end = time.time()
+            print("Time for previous iteration:", end - start)
+            start = time.time()
             perm = weight_matching.weight_matching(ps, params_model, params_b)
             projected_parameters = weight_matching.apply_permutation(ps, perm, params_b)
 
@@ -79,13 +86,27 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
                 phi_state_dict[a_name] = 0.5 * (projected_parameters[proj_name] + a_para)
             phi_model.load_state_dict(phi_state_dict)
             preds = phi_model(xb)
-            loss = loss_fn(preds, yb)
+            loss1 = loss_fn(preds, yb)
             # TODO: Idea: Compute a loss for model, add layer that changes model's loss to phi_model's
             # loss which has derivative 1, and then backpropagates.
+            preds_model =  model(xb)
+            loss2 = loss_fn(preds_model, yb)
+            # junk_model = copy.deepcopy(model)
+            # junk = junk_model(xb)
+            # loss3 = loss_fn(junk, yb)
+
+            loss = loss1 * loss2
+
+            # fix = nn.Linear(1,1)
+            # with torch.no_grad():
+            #     fix.weight.data[...] = torch.Tensor([1])
+            #     fix.bias.data[...] = torch.Tensor([-loss2.item()])
+            # loss = fix(torch.Tensor([loss2]))
+
             optimizer.zero_grad()
             loss.backward()
-            for model_param, phi_model_param in zip(model.parameters(), phi_model.parameters()):
-                model_param.grad = phi_model_param.grad
+            # for model_param, phi_model_param in zip(model.parameters(), phi_model.parameters()):
+            #     model_param.grad = phi_model_param.grad
 
             # Pytorch won't let me change model parameters mid-backwards pass
             # for name, param in model.named_parameters():
@@ -94,10 +115,16 @@ def straight_through_estimator_training(ps: weight_matching.PermutationSpec, mod
             # for name, param in model.named_parameters():
             #    param.grad = grad_storage[name]
 
+            if i == 4:
+                for model_param in model.parameters():
+                    print(model_param.grad)
             optimizer.step()
             for name, para in model.named_parameters():
                 params_model[name] = para
             model_state_dict = model.state_dict()
+            i += 1
+        for model_param in model.parameters():
+            print(model_param.grad)
         loss = loss.item()
         print(f"Train loss: {loss:>7f}")
     return perm
