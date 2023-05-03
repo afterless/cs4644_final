@@ -26,8 +26,8 @@ def straight_through_estimator(ps, modelA, modelB, train_loader, loss_fn, device
         p.requires_grad = True
 
     optimizer = t.optim.Adam(model.parameters(), lr=args.lr)
-    # wandb.init(project="perm_matching", config=args)
-    # wandb.watch(model, log="all")
+    wandb.init(project="perm_matching", config=args)
+    wandb.watch(model, log="all")
     for e in range(args.num_epochs):
         for i, (data, target) in enumerate(train_loader):
             data, target = data.to(device), target.to(device)
@@ -52,8 +52,8 @@ def straight_through_estimator(ps, modelA, modelB, train_loader, loss_fn, device
             del params_model
             params_model = {k: v.detach() for k, v in model.named_parameters()}
             loss = loss.item()
-            print("Train Loss: {:.6f}".format(loss))
+            print(f"Epoch: {e}", "Train Loss: {:.6f}".format(loss))
             final_perm = perm
-            # wandb.log({"train_loss": loss})
+            wandb.log({"epoch": e, "train_loss": loss})
 
     return final_perm

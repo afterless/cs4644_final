@@ -40,7 +40,7 @@ if __name__ == "__main__":
     modelB.to(device)
     modelB.load_state_dict(chkptB)
 
-    ps = weight_matching.mlp_grok_permutation_spec(num_hidden_layers=1)
+    ps = weight_matching.mlp_grok_permutation_spec(num_hidden_layers=2)
     train_pairs, test_pairs = gen_train_test(args.frac_train, p, seed=args.seed)
 
     train_pairs = TensorDataset(
