@@ -2,6 +2,8 @@ import argparse
 import torch as t
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
+import wandb
+from tqdm import tqdm
 
 import os
 import sys
@@ -30,7 +32,7 @@ if __name__ == "__main__":
     device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
     chkptA = t.load("../train/checkpoints/mlp_grok_final_1.pt", map_location=device)
-    chkptB = t.load("../train/checkpoints/mlp_grok_final_3.pt", map_location=device)
+    chkptB = t.load("./checkpoints/perm_model_1_p3.pt", map_location=device)
 
     modelA = MLP(d_vocab, d_model)
     modelA.to(device)
@@ -40,7 +42,6 @@ if __name__ == "__main__":
     modelB.to(device)
     modelB.load_state_dict(chkptB)
 
-    ps = mlp_grok_permutation_spec(num_hidden_layers=2)
     train_pairs, test_pairs = gen_train_test(args.frac_train, p, seed=args.seed)
 
     train_pairs = TensorDataset(
@@ -61,12 +62,33 @@ if __name__ == "__main__":
         test_pairs, batch_size=len(test_pairs), shuffle=True, num_workers=2
     )
 
-    opt_perm_pi = straight_through_estimator(
-        ps, modelA, modelB, train_loader, test_loader, cross_entropy_high_precision, device, args
-    )
+    wandb.init(project="perm_matching", config=args)
 
-    modelB_dict = modelB.state_dict()
-    modelB_perm = apply_permutation(ps, opt_perm_pi, modelB_dict)
-    modelB.load_state_dict(modelB_perm)
-    os.makedirs("./checkpoints", exist_ok=True)
-    t.save(modelB.state_dict(), f"./checkpoints/perm_model_1_p3.pt")
+    modelC = MLP(d_vocab, d_model)
+    for p in t.arange(0, 1, step=0.1):
+        modelC_dict = {}
+        for (n, _), p_a, p_b in zip(modelC.named_parameters(), modelA.parameters(), modelB.parameters()):
+            modelC_dict[n] = p * p_a + (1 - p) * p_b
+        modelC.load_state_dict(modelC_dict)
+
+        test_loss = 0
+        i = 0
+        correct = 0
+        with t.inference_mode():
+            for data, target in tqdm(test_loader):
+                data, target = data.to(device), target.to(device)
+                output = modelC(data)
+                test_loss += cross_entropy_high_precision(output, target).item()
+                pred = output.argmax(dim=-1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+                i += 1
+        test_loss /= i
+        acc = 100.0 * correct / len(test_loader.dataset)
+        print(
+            "Average Test Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
+                test_loss, correct, len(test_loader.dataset), acc
+            )
+        )
+        if wandb.run is not None:
+            wandb.log({"test_loss": test_loss, "test_acc": acc, "lerp": p})
+        
