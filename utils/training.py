@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch as t
-from tqdm import tqdm
+from tqdm.auto import tqdm
 import wandb
 
 
@@ -9,7 +9,7 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
     correct = 0
     loss_total = 0
     t = 0
-    for i, (data, target) in enumerate(tqdm(train_loader)):
+    for i, (data, target) in enumerate(tqdm(train_loader, position=0, leave=True)):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
@@ -19,22 +19,15 @@ def train(model, device, train_loader, loss_fn, optimizer, epoch, args):
         loss.backward()
         optimizer.step()
         if i % args.log_interval == 0:
-            print(
+            tqdm.write(
                 "Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}".format(
                     epoch,
                     i * len(data),
                     len(train_loader.dataset),
                     100.0 * i / len(train_loader),
                     loss.item(),
-                )
+                ),
             )
-            if wandb.run is not None and epoch % args.save_every == 0:
-                table = wandb.Table(columns=["operands", "pred_sum", "target_sum"])
-                for data, pred, target in zip(data[:5], pred[:5], target[:5]):
-                    table.add_data(
-                        f"{data[0].item()}+{data[1].item()}", pred.item(), target.item()
-                    )
-                wandb.log({"examples": table})
         loss_total += loss.item()
         t += 1
 

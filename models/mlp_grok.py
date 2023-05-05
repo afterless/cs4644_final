@@ -41,4 +41,4 @@ class MLP(nn.Module):
         x = F.relu(self.hook_pre(self.layer0(x)))
         x = F.relu(self.hook_post(self.layer1(x)))
         x = self.unembed(x)
-        return x
+        return F.log_softmax(x, dim=-1)

@@ -5,7 +5,9 @@ from tqdm import tqdm
 from utils.weight_matching import weight_matching, apply_permutation
 
 
-def straight_through_estimator(ps, modelA, modelB, train_loader, test_loader, loss_fn, device, args):
+def straight_through_estimator(
+    ps, modelA, modelB, train_loader, test_loader, loss_fn, device, args
+):
     """
     Train two models to match each other's weights using straight-through estimation
     modelA and modelB are the two modules to be used
@@ -17,7 +19,7 @@ def straight_through_estimator(ps, modelA, modelB, train_loader, test_loader, lo
     model.to(device)
     pi_model.to(device)
 
-    params_b = {k: v for k, v in modelB.named_parameters()}
+    params_b = modelB.state_dict()
     params_model = {k: v.detach() for k, v in model.named_parameters()}
 
     pi_model_state_dict = pi_model.state_dict()
@@ -27,8 +29,6 @@ def straight_through_estimator(ps, modelA, modelB, train_loader, test_loader, lo
         p.requires_grad = True
 
     optimizer = t.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
-    wandb.init(project="perm_matching", config=args)
-    wandb.watch(model, log="all")
     for e in range(args.num_epochs):
         for i, (data, target) in tqdm(enumerate(train_loader)):
             data, target = data.to(device), target.to(device)
@@ -53,11 +53,10 @@ def straight_through_estimator(ps, modelA, modelB, train_loader, test_loader, lo
             del params_model
             params_model = {k: v.detach() for k, v in model.named_parameters()}
             loss = loss.item()
-            print(f"Epoch: {e}", "Train Loss: {:.6f}".format(loss))
             final_perm = perm
             if wandb.run is not None:
                 wandb.log({"epoch": e, "train_loss": loss})
-        
+
         test_loss = 0
         i = 0
         correct = 0

@@ -1,4 +1,5 @@
 scratch/
+mnist_data_*
 wandb
  
 *.orig

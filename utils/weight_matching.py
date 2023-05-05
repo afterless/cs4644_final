@@ -23,9 +23,9 @@ def mlp_permutation_spec(num_hidden_layers: int) -> PermutationSpec:
     assert num_hidden_layers >= 1
     return permutation_spec_from_axes_to_perm(
         {
-            "layer0.weight": (None, "P_0"),
+            "layer0.weight": ("P_0", None),
             **{
-                f"layer{i}.weight": (f"P_{i-1}", f"P_{i}")
+                f"layer{i}.weight": (f"P_{i}", f"P_{i-1}")
                 for i in range(1, num_hidden_layers)
             },
             **{f"layer{i}.bias": (f"P_{i}",) for i in range(num_hidden_layers)},

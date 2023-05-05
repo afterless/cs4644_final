@@ -29,7 +29,7 @@ git clone git@github.com:afterless/cs4644_final.git
 cd cs4644_final
 ENV_PATH=~/cs4644_final/.env
 conda create -p $ENV_PATH python=3.10 -y
-conda install -p $ENV_PATH pytorch=1.12.0 torchtext torchdata torchvision -c pytorch -y
+conda install -p $ENV_PATH pytorch=2.0.0 torchtext torchdata torchvision -c pytorch -y
 conda run -p $ENV_PATH pip install -r requirements.txt
 
 # Add the ssh key to the ssh-agent each time

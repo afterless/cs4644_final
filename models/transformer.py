@@ -117,13 +117,13 @@ class MLP(nn.Module):
         assert act_type in ["ReLU", "GeLU"]
 
     def forward(self, x):
-        x = self.hook_pre(t.einsum("md,bpd->bpm", self.W_in, x)) #+ self.b_in)
+        x = self.hook_pre(t.einsum("md,bpd->bpm", self.W_in, x))  # + self.b_in)
         if self.act_type == "ReLU":
             x = F.relu(x)
         elif self.act_type == "GeLU":
             x = F.gelu(x)
         x = self.hook_post(x)
-        x = t.einsum("dm,bpm->bpd", self.W_out, x) #+ self.b_out
+        x = t.einsum("dm,bpm->bpd", self.W_out, x)  # + self.b_out
         return x
 
 
@@ -189,7 +189,7 @@ class Transformer(nn.Module):
         for b in self.blocks:
             x = b(x)
         x = self.unembed(x)
-        return x
+        return F.log_softmax(x, dim=-1)
 
     def set_use_cache(self, use_cache):
         self.use_cache = use_cache
