@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 import torchvision
 from torchvision import transforms
+import wandb
 
 import os
 import sys
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 
     train_loader = DataLoader(mnist_train, batch_size=128, shuffle=True, num_workers=2)
     test_loader = DataLoader(mnist_test, batch_size=128, shuffle=False, num_workers=2)
-
+    wandb.init(project="perm_matching", config=vars(args))
     opt_perm_i = straight_through_estimator(
         ps,
         modelA,
