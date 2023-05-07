@@ -1,16 +1,21 @@
+from collections import defaultdict
+from typing import NamedTuple
+
 import torch as t
 from scipy.optimize import linear_sum_assignment
 
 
-def activation_matching(modelA, modelB, train_loader, args):
+def activation_matching(ps, modelA, modelB, train_loader, args):
     """
     Given two models, return permutation of modelB to match modelA based on
     activations.
     """
     modelA.eval()
     modelB.eval()
+    activations = {}
 
     def hook(act, name):
+        activations[name] = act
         pass
 
     for pA, pB in zip(modelA, modelB):
