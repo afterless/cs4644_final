@@ -49,6 +49,6 @@ def plot_interp_acc(
     ax.set_xticklabels(["Model $A$", "Model $B$"])
     ax.set_ylabel("Loss")
     ax.set_title("Interpolated Loss")
-    ax.legend(loc="lower right", framealpha=0.5)
+    ax.legend(loc="upper left", framealpha=0.5)
     fig.tight_layout()
     return fig

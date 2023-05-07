@@ -6,8 +6,6 @@ import sys
 import torch as t
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
-import torchvision
-from torchvision import transforms
 from tqdm.auto import tqdm
 import wandb
 import matplotlib.pyplot as plt
@@ -64,7 +62,7 @@ def main():
     modelB.load_state_dict(chkptB)
 
     ps = mlp_grok_permutation_spec(num_hidden_layers=2)
-    train_pairs, test_pairs = gen_train_test(args.frac_train, p, seed=args.seed)
+    train_pairs, test_pairs = gen_train_test(0.3, p, seed=1)
 
     train_pairs = TensorDataset(
         t.tensor([t[0] for t in train_pairs], dtype=t.long),

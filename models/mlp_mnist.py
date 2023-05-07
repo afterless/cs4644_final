@@ -20,6 +20,12 @@ class MLP(nn.Module):
         self.hook3 = HookPoint()
         self.hook4 = HookPoint()
 
+        self.hook0.give_name("layer0")
+        self.hook1.give_name("layer1")
+        self.hook2.give_name("layer2")
+        self.hook3.give_name("layer3")
+        self.hook4.give_name("layer4")
+
     def forward(self, x):
         x = x.view(x.shape[0], -1)
         x = F.relu(self.hook0(self.layer0(x)))
