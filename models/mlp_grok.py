@@ -37,10 +37,10 @@ class MLP(nn.Module):
         self.hook3 = HookPoint()
 
     def forward(self, x):
-        x = self.embed(x)
+        x = self.hook0(self.embed(x))
         x = rearrange(x, "b s d -> b (s d)")
         # x = x.sum(dim=1)
-        x = F.relu(self.hook0(self.layer0(x)))
-        x = F.relu(self.hook1(self.layer1(x)))
-        x = self.unembed(x)
+        x = F.relu(self.hook1(self.layer0(x)))
+        x = F.relu(self.hook2(self.layer1(x)))
+        x = self.hook3(self.unembed(x))
         return F.log_softmax(x, dim=-1)
