@@ -5,7 +5,6 @@
 The purpose of this final project is to replicate the Git Re-Basin [paper](https://arxiv.org/abs/2209.04836) on a 2L MLP trained on modular addition. The goal of this project
 would be to build upon Nanda et al.'s [work](https://arxiv.org/pdf/2301.05217.pdf) into interpreting networks that have learned moduler addition via "grokking" as shown in Power et al.'s [work](https://arxiv.org/pdf/2201.02177.pdf). With Git Re-Basin, we hope to show the existence of single basin phenomenon with respect to certain architectures, in this case modular addition and whether there is a connection to properties like grokking and those explored in Git Re-Basin as well as trying to replicate the paper successfully due to previous failed attempts by others. We will be using Stanislav Fort's [replication](https://github.com/stanislavfort/dissect-git-re-basin), the Git Re-Basin [codebase](https://github.com/samuela/git-re-basin), and Neel Nanda's [codebase](https://colab.research.google.com/drive/1F6_1_cWXE5M7WocUcpQWp3v8z4b1jL20#scrollTo=BhhJmRH8IIvy) as a starting point for this project.
 
-
 ## Setup
 If you wish to run this project out of interest or to contribute, you can setup your machine using [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or something similar to make a virtual environment. If you are on macOS or Linux you can use the following:
 
@@ -28,6 +27,36 @@ conda run -p $ENV_PATH pip install -r requirements.txt
 ```
 
 ## Results
+Below are plots taken for two experiments: training an MLP on MNIST to verify that all three algorithms are working, and an MLP that was trained on modular addition. These modular addition models are notable in that each "grokked" the task achieving 100% test accuracy.
+### MNIST Plots
+- Activation Matching
+    - ![Activation Matching](./matching/plots/mlp_mnist/mlp_mnist_interp_1_3_act.png)
+- Weight Matching
+    - ![Weight Matching](./matching/plots/mlp_mnist/mlp_mnist_interp_1_3_wm.png)
+- Straight Through Estimation
+    - ![Straight Through Estimation](./matching/plots/mlp_mnist/mlp_mnist_interp_1_3_ste.png)
 
-### Plots
+### Modular Addition Plots
+
+(Note: Activation Matching did not work due to nature of Embedding layer)
+
+- Weight Matching
+    - ![Weight Matching](./matching/plots/mlp_grok_interp_all/mlp_grok_interp_1_3_wm.png)
+- Straight Through Estimation
+    - ![Straight Through Estimation](./matching/plots/mlp_grok_interp_all/mlp_grok_interp_1_3_ste.png)
+
 ### Takeaways
+The performance of the rebasin algorithms on modular additions is really bad to the point any permutation destroys model performance. However, if we don't choose to permute the embedding weights, we see curves similar to the other rebasin curves, and notice that even if we permute the other weights in the model the original grokking performance still holds:
+
+- Weight Matching (No Embedding Permutation)
+    -![Weight Matching](./matching/plots/mlp_grok_interp_all/mlp_grok_interp_1_3_wm_no_embed.png)
+- Straight Through Estimation (No Embedding Permutation)
+    -![Straight through Estimation](./matching/plots/mlp_grok_interp_all/mlp_grok_interp_1_3_ste_no_embed.png)
+
+As shown however, naive interpolation still outperforms rebasin techniques, leading me to believe that each possible basin a grokked model could end up in is permutationally invariant, or that any permutation of the weights except embedding still lies in its original basin, hence why there is no rebasin benefit for these models.
+
+As an addendum, these are interpolation plots where neither embedding/unembedding was permuted:
+- Weight Matching
+    -![Weight Matching](./matching/plots/mlp_grok_interp_all/mlp_grok_interp_1_3_wm_no_both.png)
+- Straight Through Estimation
+    -![Straight Through Estimation](./matching/plots/mlp_grok_interp_all/mlp_grok_interp_1_3_ste_no_both.png)

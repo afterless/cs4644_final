@@ -67,4 +67,9 @@ def activation_matching(ps, modelA, modelB, train_loader, device):
         assert (t.tensor(ri) == t.arange(len(ri))).all()
         perm[p] = t.tensor(ci)
 
+    for nA, nB in zip(modelA.named_children(), modelB.named_children()):
+        if "hook" in nA[0]:
+            nA[1].remove_hooks()
+            nB[1].remove_hooks()
+
     return perm

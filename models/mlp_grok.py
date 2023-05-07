@@ -31,18 +31,18 @@ class MLP(nn.Module):
         self.layer0 = nn.Linear(d_model + d_model, d_model * 2, bias=False)
         self.layer1 = nn.Linear(d_model * 2, d_model, bias=False)
         self.unembed = UnEmbed(d_vocab, d_model)
-        # self.hook0 = HookPoint()
+        self.hook0 = HookPoint()
         self.hook1 = HookPoint()
         self.hook2 = HookPoint()
         self.hook3 = HookPoint()
 
-        # self.hook0.give_name("embed")
+        self.hook0.give_name("embed")
         self.hook1.give_name("layer0")
         self.hook2.give_name("layer1")
         self.hook3.give_name("unembed")
 
     def forward(self, x):
-        x = self.embed(x)
+        x = self.hook0(self.embed(x))
         x = rearrange(x, "b s d -> b (s d)")
         # x = x.sum(dim=1)
         x = F.relu(self.hook1(self.layer0(x)))
