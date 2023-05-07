@@ -24,6 +24,7 @@ def straight_through_estimator(
 
     pi_model_state_dict = pi_model.state_dict()
     final_perm = None
+    best_loss = float("inf")
 
     for p in model.parameters():  # might not be necessary
         p.requires_grad = True
@@ -31,7 +32,7 @@ def straight_through_estimator(
     if wandb.run is not None:
         wandb.watch(model, log="all")
 
-    optimizer = t.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
+    optimizer = t.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
 
     if wandb.run is not None:
         wandb.watch(model, log="all")
@@ -52,7 +53,7 @@ def straight_through_estimator(
                 pi_model_state_dict[n] = 0.5 * (p_a + ((p_p - p_m).detach() + p_m))
 
             optimizer.zero_grad()
-            output = t.func.functional_call(pi_model, pi_model_state_dict, data)
+            output = t.func.functional_call(pi_model, pi_model_state_dict, data)  # type: ignore
             loss = loss_fn(output, target)
             loss.backward()
             optimizer.step()
@@ -60,7 +61,9 @@ def straight_through_estimator(
             del params_model
             params_model = {k: v.detach() for k, v in model.named_parameters()}
             loss = loss.item()
-            final_perm = perm
+            if loss < best_loss:
+                best_loss = loss
+                final_perm = perm
             if wandb.run is not None:
                 wandb.log({"epoch": e, "train_loss": loss})
 
@@ -70,7 +73,7 @@ def straight_through_estimator(
         with t.inference_mode():
             for data, target in tqdm(test_loader):
                 data, target = data.to(device), target.to(device)
-                output = t.func.functional_call(pi_model, pi_model_state_dict, data)
+                output = t.func.functional_call(pi_model, pi_model_state_dict, data)  # type: ignore
                 test_loss += loss_fn(output, target).item()
                 pred = output.argmax(dim=-1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()

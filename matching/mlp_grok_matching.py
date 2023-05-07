@@ -14,16 +14,23 @@ import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from models.mlp_mnist import MLP
+from models.mlp_grok import MLP
+from train.mlp_grok_train import cross_entropy_high_precision, gen_train_test
 from utils.weight_matching import (
     weight_matching,
     apply_permutation,
-    mlp_permutation_spec,
+    mlp_grok_permutation_spec,
 )
+
 from utils.straight_through_estimator import straight_through_estimator
 from utils.util import lerp
 from utils.training import test
 from utils.plot import plot_interp_acc
+
+# Fixed params for testing
+p = 113
+d_model = 64
+d_vocab = p
 
 
 def main():
@@ -40,40 +47,38 @@ def main():
     device = t.device("cuda" if t.cuda.is_available() else "cpu")
 
     chkptA = t.load(
-        f"../train/checkpoints/mlp_mnist/mlp_mnist_final_{args.model_a}.pt",
+        f"../train/checkpoints/mlp_grok/mlp_grok_final_{args.model_a}.pt",
         map_location=device,
     )
     chkptB = t.load(
-        f"../train/checkpoints/mlp_mnist/mlp_mnist_final_{args.model_b}.pt",
+        f"../train/checkpoints/mlp_grok/mlp_grok_final_{args.model_b}.pt",
         map_location=device,
     )
 
-    modelA = MLP()
+    modelA = MLP(d_vocab, d_model)
     modelA.to(device)
     modelA.load_state_dict(chkptA)
 
-    modelB = MLP()
+    modelB = MLP(d_vocab, d_model)
     modelB.to(device)
     modelB.load_state_dict(chkptB)
 
-    ps = mlp_permutation_spec(num_hidden_layers=4)
+    ps = mlp_grok_permutation_spec(num_hidden_layers=2)
+    train_pairs, test_pairs = gen_train_test(args.frac_train, p, seed=args.seed)
 
-    transform = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Normalize((0.1307,), (0.3081,)),
-        ]
+    train_pairs = TensorDataset(
+        t.tensor([t[0] for t in train_pairs], dtype=t.long),
+        t.tensor([t[1] for t in train_pairs], dtype=t.long),
     )
 
-    mnist_train = torchvision.datasets.MNIST(
-        "../data", train=True, download=True, transform=transform
-    )
-    mnist_test = torchvision.datasets.MNIST(
-        "../data", train=False, download=True, transform=transform
+    test_pairs = TensorDataset(
+        t.tensor([t[0] for t in test_pairs], dtype=t.long),
+        t.tensor([t[1] for t in test_pairs], dtype=t.long),
     )
 
-    train_loader = DataLoader(mnist_train, batch_size=5000, num_workers=2)
-    test_loader = DataLoader(mnist_test, batch_size=5000, num_workers=2)
+    train_loader = DataLoader(train_pairs, batch_size=len(train_pairs), num_workers=2)
+
+    test_loader = DataLoader(test_pairs, batch_size=len(test_pairs), num_workers=2)
 
     if args.matching == "wm":
         opt_perm = weight_matching(
@@ -89,7 +94,7 @@ def main():
             modelB,
             train_loader,
             test_loader,
-            F.cross_entropy,
+            cross_entropy_high_precision,
             device,
             args,
         )
@@ -143,7 +148,7 @@ def main():
 
     os.makedirs("./plots", exist_ok=True)
     plt.savefig(
-        f"./plots/mlp_mnist_interp_{args.model_a}_{args.model_b}_{args.matching}.png",
+        f"./plots/mlp_grok_interp_{args.model_a}_{args.model_b}_{args.matching}.png",
         dpi=300,
     )
 
