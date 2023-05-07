@@ -72,8 +72,8 @@ def main():
         "../data", train=False, download=True, transform=transform
     )
 
-    train_loader = DataLoader(mnist_train, batch_size=5000, shuffle=True, num_workers=2)
-    test_loader = DataLoader(mnist_test, batch_size=5000, shuffle=False, num_workers=2)
+    train_loader = DataLoader(mnist_train, batch_size=5000, num_workers=2)
+    test_loader = DataLoader(mnist_test, batch_size=5000, num_workers=2)
 
     if args.matching == "wm":
         opt_perm_i = weight_matching(
@@ -82,7 +82,7 @@ def main():
             modelB.state_dict(),
         )
     elif args.matching == "ste":
-        wandb.init(project="mlp_mnist", config=vars(args))
+        wandb.init(project="perm_matching", config=vars(args))
         opt_perm_i = straight_through_estimator(
             ps,
             modelA,
@@ -135,10 +135,10 @@ def main():
 
     fig = plot_interp_acc(
         lam,
-        test_loss_interp_clever,
+        train_loss_interp_naive,
         test_loss_interp_naive,
         train_loss_interp_clever,
-        train_loss_interp_naive,
+        test_loss_interp_clever
     )
 
     os.makedirs("./plots", exist_ok=True)

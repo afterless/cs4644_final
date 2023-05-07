@@ -48,7 +48,7 @@ def main():
     parser.add_argument("--num_epochs", type=int, default=50000)
     parser.add_argument("--save_every", type=int, default=1000)
     parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--opt", type=str, default="adamw")
+    parser.add_argument("--opt", type=str, default="adamw", choices=["adam", "adamw"])
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--wd", type=float, default=1.0)
     parser.add_argument("--log_interval", type=int, default=8)
@@ -112,9 +112,9 @@ def main():
             break
         scheduler.step()
         if epoch % args.save_every == 0:
-            t.save(model.state_dict(), f"./checkpoints/mlp_grok_{epoch}_{args.seed}.pt")
+            t.save(model.state_dict(), f"./checkpoints/mlp_grok/mlp_grok_{epoch}_{args.seed}.pt")
 
-    t.save(model.state_dict(), f"./checkpoints/mlp_grok_final_{args.seed}.pt")
+    t.save(model.state_dict(), f"./checkpoints/mlp_grok/mlp_grok_final_{args.seed}.pt")
 
 
 if __name__ == "__main__":

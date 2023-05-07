@@ -16,9 +16,10 @@ from utils.training import train, test
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num_epochs", type=int, default=150)
+    parser.add_argument("--num_epochs", type=int, default=100)
     parser.add_argument("--save_every", type=int, default=25)
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--opt", type=str, default="adam", choices=["adam", "adamw"])
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--log_interval", type=int, default=8)
     parser.add_argument("--stopping_thresh", type=float, default=3e-6)
@@ -43,13 +44,18 @@ def main():
         "../data", train=False, download=True, transform=transform
     )
 
-    train_loader = DataLoader(mnist_train, batch_size=128, shuffle=True, num_workers=2)
-    test_loader = DataLoader(mnist_test, batch_size=128, shuffle=False, num_workers=2)
+    train_loader = DataLoader(mnist_train, batch_size=500, shuffle=True, num_workers=2)
+    test_loader = DataLoader(mnist_test, batch_size=500, shuffle=False, num_workers=2)
 
     model = MLP()
     model.to(device)
+    if args.opt == "adam":
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
+    elif args.opt == "adamw":
+        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4, betas=(0.9, 0.98))
+    else:
+        raise ValueError(f"Unknown optimizer {args.opt}") 
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
     os.makedirs("./checkpoints/mlp_mnist", exist_ok=True)
     wandb.init(project="mlp_mnist", config=vars(args))
     wandb.watch(model, log="all")

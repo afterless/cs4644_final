@@ -47,7 +47,7 @@ def plot_interp_acc(
     ax.set_xlabel("$\lambda$")
     ax.set_xticks([0, 1])
     ax.set_xticklabels(["Model $A$", "Model $B$"])
-    ax.set_ylabel("Accuracy")
+    ax.set_ylabel("Loss")
     # TODO label x=0 tick as \theta_1 and x=1 tick as \theta_2
     # original_labels = [str(ticklabel) for ticklabel in ax.get_xticklabels()]
     # original_labels[0] = "Model $A$"
