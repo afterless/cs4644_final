@@ -1,56 +1,71 @@
 from collections import defaultdict
 from typing import NamedTuple
+from tqdm.auto import tqdm
 
 import torch as t
 from scipy.optimize import linear_sum_assignment
 
 
-def activation_matching(ps, modelA, modelB, train_loader, args):
+def activation_matching(ps, modelA, modelB, train_loader, device):
     """
     Given two models, return permutation of modelB to match modelA based on
     activations.
     """
     modelA.eval()
     modelB.eval()
-    activations = {}
+    activationsA = defaultdict(float)
+    activationsB = defaultdict(float)
+    paramsA = modelA.state_dict()
 
-    def hook(act, name):
-        activations[name] = act
+    def hookA(act, name):
+        activationsA[name] += act
         pass
 
-    for pA, pB in zip(modelA, modelB):
-        if "hook" in pA:
-            modelA[pA].add(hook)
-            modelB[pB].add(hook)
+    def hookB(act, name):
+        activationsB[name] += act
+        pass
 
-    # Get activations for modelA
-    activationsA = []
-    for i, (data, target) in enumerate(train_loader):
-        data, target = data.to(args.device), target.to(args.device)
-        activationsA.append(modelA(data))
-        if i == 100:
+    for nA, nB in zip(modelA.named_children(), modelB.named_children()):
+        if "hook" in nA[0]:
+            nA[1].add_hook(hookA)
+            nB[1].add_hook(hookB)
+
+    for i, (data, _) in enumerate(tqdm(train_loader)):
+        data = data.to(device)
+        modelA(data)
+        modelB(data)
+        if i == 1:
             break
 
-    # Get activations for modelB
-    activationsB = []
-    for i, (data, target) in enumerate(train_loader):
-        data, target = data.to(args.device), target.to(args.device)
-        activationsB.append(modelB(data))
-        if i == 100:
-            break
+    # Might be unecessary
+    for (nA, actA), (nB, actB) in zip(activationsA.items(), activationsB.items()):
+        activationsA[nA] = actA / len(train_loader)
+        activationsB[nB] = actB / len(train_loader)
 
-    # Compute cost matrix
-    cost_matrix = []
-    for i, activationA in enumerate(activationsA):
-        cost_matrix.append([])
-        for j, activationB in enumerate(activationsB):
-            cost_matrix[i].append(t.norm(activationA - activationB).item())
+    perm_sizes = {
+        p: paramsA[axes[0][0]].shape[axes[0][1]] for p, axes in ps.perm_to_axes.items()
+    }
 
-    # Compute optimal permutation
-    row_ind, col_ind = linear_sum_assignment(cost_matrix)
-    perm = {}
-    for i, j in zip(row_ind, col_ind):
-        perm[f"layer{i}.weight"] = f"layer{j}.weight"
-        perm[f"layer{i}.bias"] = f"layer{j}.bias"
+    perm = {p: t.arange(n) for p, n in perm_sizes.items()}
+    perm_names = list(perm.keys())
+
+    for p_ix in tqdm(range(len(perm_names))):
+        p = perm_names[p_ix]
+        n = perm_sizes[p]
+
+        A = t.zeros((n, n))
+        for wk, axis in ps.perm_to_axes[p]:
+            if axis != 0 or wk.split(".")[0] not in activationsA:
+                continue
+            a_a = activationsA[wk.split(".")[0]]
+            a_b = activationsB[wk.split(".")[0]]
+            # a_a = a_a.reshape((a_a.shape[0], -1))
+            # a_b = a_b.reshape((a_b.shape[0], -1))
+            print(a_a.shape, a_b.shape)
+            A += t.matmul(a_a.T, a_b)  # type: ignore
+
+        ri, ci = linear_sum_assignment(A.detach().numpy(), maximize=True)
+        assert (t.tensor(ri) == t.arange(len(ri))).all()
+        perm[p] = t.tensor(ci)
 
     return perm

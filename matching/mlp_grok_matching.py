@@ -19,7 +19,7 @@ from utils.weight_matching import (
     apply_permutation,
     mlp_grok_permutation_spec,
 )
-
+from utils.activation_matching import activation_matching
 from utils.straight_through_estimator import straight_through_estimator
 from utils.util import lerp
 from utils.training import test
@@ -83,6 +83,14 @@ def main():
             ps,
             modelA.state_dict(),
             modelB.state_dict(),
+        )
+    elif args.matching == "act":
+        opt_perm = activation_matching(
+            ps,
+            modelA,
+            modelB,
+            train_loader,
+            device,
         )
     elif args.matching == "ste":
         wandb.init(project="perm_matching", config=vars(args))
