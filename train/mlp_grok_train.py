@@ -94,7 +94,7 @@ def main():
 
     wandb.init(project="grok_mod_add", config=vars(args))
     wandb.watch(model, log="all")
-    os.makedirs("./checkpoints", exist_ok=True)
+    os.makedirs("./checkpoints/mlp_grok", exist_ok=True)
     for epoch in range(1, args.num_epochs + 1):
         train(
             model,

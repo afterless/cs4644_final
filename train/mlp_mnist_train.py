@@ -32,15 +32,15 @@ def main():
     transform = transforms.Compose(
         [
             transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,)),
+            transforms.Normalize((0.1307,), (0.3081,)),
         ]
     )
 
     mnist_train = torchvision.datasets.MNIST(
-        "./mnist_data_train", train=True, download=True, transform=transform
+        "../data", train=True, download=True, transform=transform
     )
     mnist_test = torchvision.datasets.MNIST(
-        "./mnist_data_test", train=False, download=True, transform=transform
+        "../data", train=False, download=True, transform=transform
     )
 
     train_loader = DataLoader(mnist_train, batch_size=128, shuffle=True, num_workers=2)
