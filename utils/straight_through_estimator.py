@@ -32,6 +32,10 @@ def straight_through_estimator(
         wandb.watch(model, log="all")
 
     optimizer = t.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
+
+    if wandb.run is not None:
+        wandb.watch(model, log="all")
+
     for e in range(args.num_epochs):
         for i, (data, target) in tqdm(enumerate(train_loader)):
             data, target = data.to(device), target.to(device)
