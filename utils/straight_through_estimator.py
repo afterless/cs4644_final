@@ -88,4 +88,7 @@ def straight_through_estimator(
         if wandb.run is not None:
             wandb.log({"test_loss": test_loss, "test_acc": acc, "epoch": e})
 
+        if test_loss < args.stopping_thresh:
+            break
+
     return final_perm
