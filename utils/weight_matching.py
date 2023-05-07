@@ -39,13 +39,13 @@ def mlp_grok_permutation_spec(num_hidden_layers: int) -> PermutationSpec:
     assert num_hidden_layers >= 1
     return permutation_spec_from_axes_to_perm(
         {
-            "embed.W_E": (None, "P_0"),
+            # "embed.W_E": (None, "P_0"),
             "layer0.weight": ("P_1", None),
             **{
                 f"layer{i}.weight": (f"P_{i+1}", f"P_{i}")
                 for i in range(1, num_hidden_layers)
             },
-            "unembed.W_U": (None, f"P_{num_hidden_layers}"),
+            "unembed.W_U": (f"P_{num_hidden_layers}", None),
         }
     )
 

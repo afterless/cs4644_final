@@ -17,10 +17,10 @@ class Embed(nn.Module):
 class UnEmbed(nn.Module):
     def __init__(self, d_vocab, d_model):
         super().__init__()
-        self.W_U = nn.parameter.Parameter(t.randn(d_vocab, d_model) / d_vocab**0.5)
+        self.W_U = nn.parameter.Parameter(t.randn(d_model, d_vocab) / d_vocab**0.5)
 
     def forward(self, x):
-        return t.matmul(self.W_U, x)
+        return t.matmul(x, self.W_U)
 
 
 # TODO: Needs to be fixed to match spec

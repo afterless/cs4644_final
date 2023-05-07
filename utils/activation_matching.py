@@ -61,7 +61,6 @@ def activation_matching(ps, modelA, modelB, train_loader, device):
             a_b = activationsB[wk.split(".")[0]]
             # a_a = a_a.reshape((a_a.shape[0], -1))
             # a_b = a_b.reshape((a_b.shape[0], -1))
-            print(a_a.shape, a_b.shape)
             A += t.matmul(a_a.T, a_b)  # type: ignore
 
         ri, ci = linear_sum_assignment(A.detach().numpy(), maximize=True)

@@ -40,6 +40,7 @@ def main():
     )
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--stopping_thresh", type=float, default=3e-6)
     args = parser.parse_args()
 
     device = t.device("cuda" if t.cuda.is_available() else "cpu")
