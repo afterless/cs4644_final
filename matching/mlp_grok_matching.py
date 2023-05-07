@@ -38,6 +38,7 @@ def main():
     parser.add_argument(
         "--matching", type=str, default="wm", choices=["wm", "ste", "act"]
     )
+    parser.add_argument("--stopping_thresh", type=float, default=3e-6)
     parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument("--lr", type=float, default=1e-3)
     args = parser.parse_args()
