@@ -30,7 +30,7 @@ cd cs4644_final
 ENV_PATH=~/cs4644_final/.env
 conda create -p $ENV_PATH python=3.10 -y
 #conda install -p $ENV_PATH pytorch=2.0.0 torchtext torchdata torchvision -c pytorch -y
-conda install -p $ENV_PATH pytorch=2.0.0 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia -y
+conda install -p $ENV_PATH pytorch=2.0.0 torchvision torchtext torchdata pytorch-cuda=11.8 -c pytorch -c nvidia -y
 conda run -p $ENV_PATH pip install -r requirements.txt
 
 # Add the ssh key to the ssh-agent each time
