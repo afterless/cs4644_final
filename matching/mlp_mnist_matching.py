@@ -24,6 +24,7 @@ from utils.straight_through_estimator import straight_through_estimator
 from utils.activation_matching import activation_matching
 from utils.util import lerp
 from utils.training import test
+
 from utils.plot import plot_interp_acc
 
 

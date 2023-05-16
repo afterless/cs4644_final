@@ -13,9 +13,9 @@ from models.mlp_grok import MLP
 from utils.training import train, test
 
 # Fixed params for testing
-p = 113
+p = 256
 fn = lambda x, y: (x + y) % p
-d_model = 64
+d_model = 32
 d_vocab = p
 
 
@@ -92,7 +92,13 @@ def main():
         raise ValueError(f"Unknown optimizer {args.opt}")
     scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda step: min(step / 10, 1))
 
-    wandb.init(project="grok_mod_add", config=vars(args))
+    wandb.init(
+        project="git_rebasin_grok",
+        entity="afterless",
+        tags=["mlp", "grok", "training"],
+        job_type="train",
+        config=vars(args),
+    )
     wandb.watch(model, log="all")
     os.makedirs("./checkpoints/mlp_grok", exist_ok=True)
     for epoch in range(1, args.num_epochs + 1):
@@ -112,7 +118,10 @@ def main():
             break
         scheduler.step()
         if epoch % args.save_every == 0:
-            t.save(model.state_dict(), f"./checkpoints/mlp_grok/mlp_grok_{epoch}_{args.seed}.pt")
+            t.save(
+                model.state_dict(),
+                f"./checkpoints/mlp_grok/mlp_grok_{epoch}_{args.seed}.pt",
+            )
 
     t.save(model.state_dict(), f"./checkpoints/mlp_grok/mlp_grok_final_{args.seed}.pt")
 

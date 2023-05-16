@@ -52,13 +52,22 @@ def main():
     if args.opt == "adam":
         optimizer = optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.98))
     elif args.opt == "adamw":
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4, betas=(0.9, 0.98))
+        optimizer = optim.AdamW(
+            model.parameters(), lr=args.lr, weight_decay=1e-4, betas=(0.9, 0.98)
+        )
     else:
-        raise ValueError(f"Unknown optimizer {args.opt}") 
+        raise ValueError(f"Unknown optimizer {args.opt}")
 
-    os.makedirs("./checkpoints/mlp_mnist", exist_ok=True)
-    wandb.init(project="mlp_mnist", config=vars(args))
+    wandb.init(
+        project="git_rebasin_grok",
+        entity="afterless",
+        tags=["mlp", "mnist", "training"],
+        job_type="train",
+        config=vars(args),
+    )
     wandb.watch(model, log="all")
+    os.makedirs("./checkpoints/mlp_mnist", exist_ok=True)
+
     for epoch in range(1, args.num_epochs + 1):
         train(
             model,
